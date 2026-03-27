@@ -42,39 +42,43 @@ TASKS = {
         task_id=2,
         difficulty="Medium",
         description=(
-            "LLM generated cartesian join between users and orders — missing JOIN condition. "
-            "The query uses comma-separated tables without proper JOIN, creating a cartesian product "
-            "of 100K users × 200K orders = 20 billion row combinations before filtering."
+            "LLM generated query with missing index on foreign key. "
+            "The query joins users and orders but lacks an index on orders.user_id, "
+            "causing a full table scan for each user match. "
+            "Agent must create index on the foreign key column."
         ),
         slow_query=(
             "SELECT u.email, COUNT(o.id) as order_count "
-            "FROM users u, orders o "
+            "FROM users u "
+            "JOIN orders o ON u.id = o.user_id "
             "WHERE u.country = 'IN' "
             "GROUP BY u.email"
         ),
         target_time_ms=200.0,
-        setup_commands=[]  # No index to drop — fault is in the query itself
+        setup_commands=[
+            "DROP INDEX IF EXISTS idx_orders_user",
+            "DROP INDEX IF EXISTS idx_users_country"
+        ]
     ),
     
     3: Task(
         task_id=3,
         difficulty="Hard",
         description=(
-            "LLM generated correlated subquery + two missing indexes. "
-            "The query uses a correlated subquery that executes once per user row, "
-            "and both the outer query (country filter) and inner query (user_id join) lack indexes. "
-            "Must create indexes in correct order and potentially rewrite the subquery as a JOIN."
+            "LLM generated query with missing composite index. "
+            "The query filters by status and sorts by created_at, but lacks a composite index. "
+            "Agent must create a composite index on (status, created_at) for optimal performance."
         ),
         slow_query=(
-            "SELECT u.email, "
-            "(SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count "
-            "FROM users u "
-            "WHERE u.country = 'IN'"
+            "SELECT * FROM orders "
+            "WHERE status = 'pending' "
+            "ORDER BY created_at DESC "
+            "LIMIT 100"
         ),
         target_time_ms=150.0,
         setup_commands=[
-            "DROP INDEX IF EXISTS idx_orders_user",
-            "DROP INDEX IF EXISTS idx_users_country"
+            "DROP INDEX IF EXISTS idx_orders_status",
+            "DROP INDEX IF EXISTS idx_orders_created"
         ]
     )
 }
