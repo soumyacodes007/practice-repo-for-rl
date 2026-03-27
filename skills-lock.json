@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "alignment-review": {
+      "source": "meta-pytorch/OpenEnv",
+      "sourceType": "github",
+      "computedHash": "30c4a97fcdc685c42dc961867c110a63b6bfa028707305b121140764079e55c6"
+    },
+    "generate-openenv-env": {
+      "source": "meta-pytorch/OpenEnv",
+      "sourceType": "github",
+      "computedHash": "5ced6eb9b57ada9a4f81549875426376c076622cf38537da47040bc94dafba77"
+    },
+    "write-tests": {
+      "source": "meta-pytorch/OpenEnv",
+      "sourceType": "github",
+      "computedHash": "9b2232831dd7faa8c3641a349b25967f7fbcc926b0a8806fa2938c31cc2c730a"
+    }
+  }
+}
