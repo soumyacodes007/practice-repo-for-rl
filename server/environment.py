@@ -7,6 +7,7 @@ Real SQLite backend, programmatic graders, zero external dependencies.
 
 import logging
 import os
+import threading
 from uuid import uuid4
 from typing import Optional
 
@@ -30,26 +31,43 @@ class LLMQueryOptimizerEnvironment(Environment):
     - Analyzing tables
     
     All metrics are objective and deterministic (no LLM judge needed).
+    
+    Uses a shared database across all instances for performance.
     """
     
     SUPPORTS_CONCURRENT_SESSIONS: bool = False
     MAX_STEPS: int = 10
+    
+    # Class-level shared database (created once, reused by all instances)
+    _shared_backend: Optional[SQLiteBackend] = None
+    _backend_lock = threading.Lock()
     
     def __init__(self):
         """Initialize the environment."""
         try:
             logger.info(f"Initializing LLMQueryOptimizerEnvironment (id={id(self)})...")
             
-            # Initialize backend
-            db_path = os.environ.get("DB_PATH")  # None if not set
-            seed = int(os.environ.get("RANDOM_SEED", "42"))
-            self.backend = SQLiteBackend(db_path=db_path, seed=seed)
+            # Initialize or reuse shared backend
+            with self._backend_lock:
+                if LLMQueryOptimizerEnvironment._shared_backend is None:
+                    db_path = os.environ.get("DB_PATH")
+                    seed = int(os.environ.get("RANDOM_SEED", "42"))
+                    LLMQueryOptimizerEnvironment._shared_backend = SQLiteBackend(
+                        db_path=db_path, seed=seed
+                    )
+                    # Create database once - this is the expensive operation
+                    LLMQueryOptimizerEnvironment._shared_backend.create_and_seed_db()
+                    logger.info("Shared database created and seeded (100K users, 200K orders, 500K items)")
+                else:
+                    logger.info("Reusing existing shared database")
+                
+                self.backend = LLMQueryOptimizerEnvironment._shared_backend
             
-            # Initialize fault injector and grader
+            # Initialize fault injector and grader (per-instance)
             self.injector = FaultInjector(self.backend)
             self.grader = Grader()
             
-            # Episode state
+            # Episode state (per-instance)
             self.current_task: Optional[dict] = None
             self.step_count: int = 0
             self.action_history: list[str] = []
@@ -83,10 +101,8 @@ class LLMQueryOptimizerEnvironment(Environment):
         logger.info(f"reset() called with task_id={task_id}, seed={seed}, episode_id={episode_id} on env id={id(self)}")
         
         try:
-            # Create fresh database
-            self.backend.create_and_seed_db()
-            
-            # Inject fault for this task
+            # DON'T recreate database - just inject fault
+            # The shared database is already created and seeded
             self.current_task = self.injector.inject_fault(task_id)
             
             # Reset episode state
@@ -306,7 +322,6 @@ class LLMQueryOptimizerEnvironment(Environment):
         return self._state
     
     def close(self):
-        """Clean up resources."""
-        if self.backend:
-            self.backend.close()
-        logger.info("Environment closed")
+        """Clean up resources. Don't close shared backend."""
+        # Don't close the shared backend - it's reused across instances
+        logger.info(f"Environment instance {id(self)} closed (shared backend remains active)")
