@@ -14,29 +14,33 @@ from models import QueryAction
 from client import LLMQueryOptimizerClient
 
 
-def run_baseline(env_url: str = "http://localhost:8000", model: str = "gpt-4o-mini"):
+def run_baseline(env_url: str = "http://localhost:8000", model: str = None):
     """
     Run baseline evaluation using OpenAI API.
     
     Args:
         env_url: URL of the OpenEnv server
-        model: OpenAI model to use
+        model: OpenAI model to use (defaults to MODEL_NAME env var)
     """
-    # Check for API key
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # MANDATORY: Use environment variables as required by hackathon
+    api_base_url = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+    api_key = os.environ.get("HF_TOKEN") or os.environ.get("API_KEY") or os.environ.get("OPENAI_API_KEY")
+    model_name = model or os.environ.get("MODEL_NAME", "gpt-4o-mini")
+    
     if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Set it with: export OPENAI_API_KEY=your-key-here")
+        print("Error: API key not found in environment variables")
+        print("Set one of: HF_TOKEN, API_KEY, or OPENAI_API_KEY")
         return
     
     # Initialize OpenAI client
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(base_url=api_base_url, api_key=api_key)
     
     print("=" * 70)
     print("LLM Text2SQL Failure Gym - Baseline Evaluation")
     print("=" * 70)
     print(f"Environment: {env_url}")
-    print(f"Model: {model}")
+    print(f"API Base URL: {api_base_url}")
+    print(f"Model: {model_name}")
     print()
     
     # Connect to environment

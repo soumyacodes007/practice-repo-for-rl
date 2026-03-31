@@ -1,0 +1,20 @@
+name: cicd_pipeline_gym
+version: 1.0.0
+description: Train agents to fix and optimize CI/CD pipelines
+author: OpenEnv Hackathon Participant
+tags:
+  - devops
+  - cicd
+  - github-actions
+  - pipeline-optimization
+difficulty: medium
+tasks:
+  - name: yaml_syntax_fix
+    description: Fix YAML syntax errors in GitHub Actions pipeline
+    difficulty: easy
+  - name: add_dependencies
+    description: Add missing Node.js setup and dependency installation steps
+    difficulty: medium
+  - name: optimize_pipeline
+    description: Optimize pipeline with caching, parallelization, and job dependencies
+    difficulty: hard
